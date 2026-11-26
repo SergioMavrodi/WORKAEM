@@ -1,0 +1,8 @@
+reactions/*/input/*
+reactions/*/style_ref/*
+reactions/*/work/
+reactions/*/out/*.mp4
+reactions/*/out/*.mov
+!reactions/*/input/.gitkeep
+!reactions/*/style_ref/.gitkeep
+__pycache__/
