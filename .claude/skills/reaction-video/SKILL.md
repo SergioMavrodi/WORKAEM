@@ -60,7 +60,12 @@ Read **every** `work/sheets/sheet_*.jpg` (each tile has its source timestamp) an
 `work/transcript.txt`. Write a beat list before you write any jokes: for each story in the
 compilation, give the setup, the twist and the most absurd moment, with timestamps.
 
-## 4. Reactors
+## 4. Reactors and layout
+
+**House default (this repo):** 16:9 output, vertical 9:16 source, ONE reactor. Start from
+`reactions/_template/reaction.json`: `"video_x": 0.42` puts the vertical clip a bit left of centre with a
+blurred fill, Max goes on the right with `"size": 0.62`, and captions centre on the clip automatically. English, Piper voice.
+
 
 - Default: `python3 $S/scripts/make_avatars.py avatars --preset duo`, which gives max (left) and zoe (right).
   Other looks: `--id leo --hairstyle bowl --acc cap --hair "#3a2a20" --hoodie "#e63946"`.

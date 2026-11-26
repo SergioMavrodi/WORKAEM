@@ -1,0 +1,13 @@
+{
+  "source": "input/source.mp4",
+  "output": "out/reaction.mp4",
+  "size": [1920, 1080],
+  "video_x": 0.42,
+  "reactors": {
+    "max": {"name": "Max", "voice": "en_US-ryan-high", "length_scale": 0.88, "avatar": "avatars/max",
+            "side": "right", "size": 0.62, "color": "#2fb8ff"}
+  },
+  "hook": {"from": 0, "to": 3, "title": "THIS GETS CRAZY..."},
+  "cuts": [],
+  "events": []
+}

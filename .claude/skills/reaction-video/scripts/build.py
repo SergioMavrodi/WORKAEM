@@ -26,6 +26,7 @@ from PIL import Image
 SKILL = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FONTS = os.path.join(SKILL, "assets", "fonts")
 SR = 48000
+VIDEO_X = 0.5   # horizontal position of the fitted source, set from config
 
 
 def run(cmd):
@@ -129,7 +130,8 @@ class TTS:
 
 
 # ---------------------------------------------------------------- video segments
-def frame_filter(W, H, box, fps, inp="[0:v]", out="[v]", extra="", src_aspect=None):
+def frame_filter(W, H, box, fps, inp="[0:v]", out="[v]", extra="", src_aspect=None, vx=None):
+    vx = VIDEO_X if vx is None else vx
     """source -> WxH. If the source already fills the frame: plain scale. Otherwise a blurred
     fill background (blurred at 1/4 res for speed) + the source fitted, scaled by `box`."""
     fpsf = f",fps={fps}" if fps else ""
@@ -141,7 +143,7 @@ def frame_filter(W, H, box, fps, inp="[0:v]", out="[v]", extra="", src_aspect=No
             f"[a]scale={W // 4}:{H // 4}:force_original_aspect_ratio=increase,crop={W // 4}:{H // 4},"
             f"boxblur=8:2,eq=brightness=-0.12,scale={W}:{H}[bg];"
             f"[b]scale={bw}:{bh}:force_original_aspect_ratio=decrease[fg];"
-            f"[bg][fg]overlay=(W-w)/2:{y},setsar=1{fpsf}{extra},format=yuv420p{out}")
+            f"[bg][fg]overlay=(W-w)*{vx}:{y},setsar=1{fpsf}{extra},format=yuv420p{out}")
 
 
 def enc(preview):
@@ -206,8 +208,11 @@ def chunk_words(text, max_words=3, max_chars=16):
     return [" ".join(c) for c in chunks]
 
 
-def build_ass(lines, titles, W, H, font, fontsize, path):
+def build_ass(lines, titles, W, H, font, fontsize, path, cx=None, cw=None):
+    """cx/cw: centre x and width of the visible source, so captions sit on the video."""
     fs = fontsize or int(H * 0.085)
+    cx, cw = cx or W / 2, cw or W * 0.56
+    ml, mr = int(max(20, cx - cw / 2)), int(max(20, W - (cx + cw / 2)))
     head = f"""[Script Info]
 ScriptType: v4.00+
 PlayResX: {W}
@@ -216,8 +221,8 @@ WrapStyle: 2
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Cap,{font},{fs},&H00FFFFFF,&H00FFFFFF,&H00000000,&H96000000,0,0,0,0,100,100,1,0,1,{max(4, fs // 11)},{max(2, fs // 22)},2,{int(W * 0.22)},{int(W * 0.22)},{int(H * 0.07)},1
-Style: Title,{font},{int(fs * 1.35)},&H0000E1FF,&H00FFFFFF,&H00000000,&H96000000,0,0,0,0,100,100,2,0,1,{max(6, fs // 8)},{max(3, fs // 16)},8,60,60,{int(H * 0.06)},1
+Style: Cap,{font},{fs},&H00FFFFFF,&H00FFFFFF,&H00000000,&H96000000,0,0,0,0,100,100,1,0,1,{max(4, fs // 11)},{max(2, fs // 22)},2,{ml},{mr},{int(H * 0.07)},1
+Style: Title,{font},{int(fs * 1.35)},&H0000E1FF,&H00FFFFFF,&H00000000,&H96000000,0,0,0,0,100,100,2,0,1,{max(6, fs // 8)},{max(3, fs // 16)},8,{ml},{mr},{int(H * 0.06)},1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
@@ -310,6 +315,8 @@ def main():
     if args.preview:
         W, H = W // 2 // 2 * 2, H // 2 // 2 * 2
     box = float(cfg.get("video_scale", 1.0))
+    global VIDEO_X
+    VIDEO_X = float(cfg.get("video_x", 0.5))
     duck = float(cfg.get("duck", 0.22))
     src_vol = float(cfg.get("source_volume", 1.0))
     gap, lead, tail = cfg.get("line_gap", 0.12), cfg.get("pause_lead", 0.3), cfg.get("pause_tail", 0.25)
@@ -476,7 +483,9 @@ def main():
               any(re.search("[А-Яа-яЁё]", t["text"]) for t in titles)
         font = "Inter Black" if cyr else "Luckiest Guy"
     ass = os.path.join(build, "captions.ass")
-    build_ass(placed, titles, W, H, font, cfg.get("caption_size"), ass)
+    vw = min(W * box, H * box * aspect) if box < 1 or abs(aspect - W / H) > 0.02 else W
+    cx = (W - vw) * VIDEO_X + vw / 2
+    build_ass(placed, titles, W, H, font, cfg.get("caption_size"), ass, cx=cx, cw=max(vw * 0.95, W * 0.3))
 
     inputs = ["-i", base]
     fc, last = [], "[0:v]"
